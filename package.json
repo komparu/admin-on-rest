@@ -15,12 +15,12 @@
   "authors": [
     "François Zaninotto"
   ],
-  "repository": "marmelab/admin-on-rest",
+  "repository": "komparu/admin-on-rest",
   "homepage": "https://github.com/marmelab/admin-on-rest#readme",
   "bugs": "https://github.com/marmelab/admin-on-rest/issues",
   "license": "MIT",
   "devDependencies": {
-    "babel-cli": "~6.18.0",
+    "babel-cli": "^6.18.0",
     "babel-core": "~6.18.2",
     "babel-eslint": "~7.1.1",
     "babel-loader": "~6.2.5",
