@@ -15,7 +15,7 @@
   "authors": [
     "François Zaninotto"
   ],
-  "repository": "komparu/admin-on-rest",
+  "repository": "marmelab/admin-on-rest",
   "homepage": "https://github.com/marmelab/admin-on-rest#readme",
   "bugs": "https://github.com/marmelab/admin-on-rest/issues",
   "license": "MIT",
