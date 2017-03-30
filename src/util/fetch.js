@@ -26,8 +26,12 @@ export const fetchJson = (url, options = {}) => {
                 // not json, no big deal
             }
             if (status < 200 || status >= 300) {
-                console.log(json);
-                return Promise.reject(new HttpError((json && json.message) || statusText, status));
+                if (json && json.description) {
+                    return Promise.reject(new HttpError(json.description, status));
+                } else if (json && json.message) {
+                    return Promise.reject(new HttpError(json.message, status));
+                }
+                return Promise.reject(new HttpError(statusText, status));
             }
             return { status, headers, body, json };
         });
