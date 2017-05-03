@@ -23,7 +23,7 @@ Here are all the props accepted by the `<Create>` and `<Edit>` components:
 Here is the minimal code necessary to display a form to create and edit comments:
 
 {% raw %}
-```js
+```jsx
 // in src/App.js
 import React from 'react';
 import { jsonServerRestClient, Admin, Resource } from 'admin-on-rest';
@@ -40,7 +40,7 @@ export default App;
 
 // in src/posts.js
 import React from 'react';
-import { Create, Edit, SimpleForm, DisabledInput, TextInput, DateInput, LongTextInput, ReferenceManyField, Datagrid, TextField, DateField, EditButton } from 'admin-on-rest/lib/mui';
+import { Create, Edit, SimpleForm, DisabledInput, TextInput, DateInput, LongTextInput, ReferenceManyField, Datagrid, TextField, DateField, EditButton } from 'admin-on-rest';
 import RichTextInput from 'aor-rich-text-input';
 
 export const PostCreate = (props) => (
@@ -58,9 +58,9 @@ export const PostEdit = (props) => (
     <Edit title={<PostTitle />} {...props}>
         <SimpleForm>
             <DisabledInput label="Id" source="id" />
-            <TextInput source="title" validation={{ required: true }} />
-            <LongTextInput source="teaser" validation={{ required: true }} />
-            <RichTextInput source="body" validation={{ required: true }} />
+            <TextInput source="title" validate={required} />
+            <LongTextInput source="teaser" validate={required} />
+            <RichTextInput source="body" validate={required} />
             <DateInput label="Publication date" source="published_at" />
             <ReferenceManyField label="Comments" reference="comments" target="post_id">
                 <Datagrid>
@@ -87,7 +87,7 @@ By default, the title for the Create view is "Create [resource_name]", and the t
 
 You can customize this title by specifying a custom `title` prop:
 
-```js
+```jsx
 export const PostEdit = (props) => (
     <Edit title="Post edition" {...props}>
         ...
@@ -97,7 +97,7 @@ export const PostEdit = (props) => (
 
 More interestingly, you can pass a component as `title`. Admin-on-rest clones this component and, in the `<EditView>`, injects the current `record`. This allows to customize the title according to the current record:
 
-```js
+```jsx
 const PostTitle = ({ record }) => {
     return <span>Post {record ? `"${record.title}"` : ''}</span>;
 };
@@ -112,11 +112,11 @@ export const PostEdit = (props) => (
 
 You can replace the list of default actions by your own element using the `actions` prop:
 
-```js
+```jsx
 import { CardActions } from 'material-ui/Card';
 import FlatButton from 'material-ui/FlatButton';
 import NavigationRefresh from 'material-ui/svg-icons/navigation/refresh';
-import { ListButton, ShowButton, DeleteButton } from 'admin-on-rest/lib/mui';
+import { ListButton, ShowButton, DeleteButton } from 'admin-on-rest';
 
 const cardActionStyle = {
     zIndex: 2,
@@ -155,7 +155,7 @@ Here are all the props accepted by the `<SimpleForm>` component:
 * [`defautValue`](#default-values)
 * [`validation`](#validation)
 
-```js
+```jsx
 export const PostCreate = (props) => (
     <Create {...props}>
         <SimpleForm>
@@ -179,24 +179,24 @@ Here are all the props accepted by the `<TabbedForm>` component:
 * [`validation`](#validation)
 
 {% raw %}
-```js
-import { TabbedForm, FormTab } from 'admin-on-rest/lib/mui'
+```jsx
+import { TabbedForm, FormTab } from 'admin-on-rest'
 
 export const PostEdit = (props) => (
     <Edit {...props}>
         <TabbedForm>
             <FormTab label="summary">
                 <DisabledInput label="Id" source="id" />
-                <TextInput source="title" validation={{ required: true }} />
-                <LongTextInput source="teaser" validation={{ required: true }} />
+                <TextInput source="title" validate={required} />
+                <LongTextInput source="teaser" validate={required} />
             </FormTab>
             <FormTab label="body">
-                <RichTextInput source="body" validation={{ required: true }} addLabel={false} />
+                <RichTextInput source="body" validate={required} addLabel={false} />
             </FormTab>
             <FormTab label="Miscellaneous">
                 <TextInput label="Password (if protected post)" source="password" type="password" />
                 <DateInput label="Publication date" source="published_at" />
-                <NumberInput source="average_note" validation={{ min: 0 }} />
+                <NumberInput source="average_note" validate={[ number, minValue(0) ]} />
                 <BooleanInput label="Allow comments?" source="commentable" defaultValue />
                 <DisabledInput label="Nb views" source="views" />
             </FormTab>
@@ -223,7 +223,7 @@ To define default values, you can add a `defaultValue` prop to form components (
 
 The value of the form `defaultValue` prop can be an object or a function returning an object, specifying default value for the created record. For instance:
 
-```js
+```jsx
 const postDefaultValue = { created_at: new Date(), nb_views: 0 };
 export const PostCreate = (props) => (
     <Create {...props}>
@@ -242,7 +242,7 @@ export const PostCreate = (props) => (
 
 Alternatively, you can specify a `defaultValue` prop directly in `<Input>` components. Admin-on-rest will merge the child default values with the form default value (input > form):
 
-```js
+```jsx
 export const PostCreate = (props) => (
     <Create {...props}>
         <SimpleForm>
@@ -257,14 +257,16 @@ export const PostCreate = (props) => (
 
 ## Validation
 
-To validate a form, you can add a `validation` prop to the form component, to individual inputs, or even mix both approaches.
+Admin-on-rest relies on [redux-form](http://redux-form.com/) for the validation.
+
+To validate values submitted by a form, you can add a `validate` prop to the form component, to individual inputs, or even mix both approaches.
 
 ### Global Validation
 
-The value of the form `validation` prop must be a function taking the record as input, and returning an object with error messages indexed by field. For instance:
+The value of the form `validate` prop must be a function taking the record as input, and returning an object with error messages indexed by field. For instance:
 
-``` js
-const createValidation = (values) => {
+```jsx
+const validateUserCreation = (values) => {
     const errors = {};
     if (!values.firstName) {
         errors.firstName = ['The firstName is required'];
@@ -279,7 +281,7 @@ const createValidation = (values) => {
 
 export const UserCreate = (props) => (
     <Create {...props}>
-        <SimpleForm validation={createValidation}>
+        <SimpleForm validate={validateUserCreation}>
             <TextInput label="First Name" source="firstName" />
             <TextInput label="Age" source="age" />
         </SimpleForm>
@@ -287,24 +289,28 @@ export const UserCreate = (props) => (
 );
 ```
 
+**Tip**: The props you pass to `<SimpleForm>` and `<TabbedForm>` end up as `reduxForm()` parameters. This means that, in addition to `validate`, you can also pass `warn` or `asyncValidate` functions. Read the [`reduxForm()` documentation](http://redux-form.com/6.5.0/docs/api/ReduxForm.md/) for details.
+
 ### Per Field Validation: Function Validator
 
-Alternatively, you can specify a `validation` prop directly in `<Input>` components. Admin-on-rest will mash all the individual functions up to a single function looking just like the previous one:
+Alternatively, you can specify a `validate` prop directly in `<Input>` components, taking either a function, or an array of functions. These functions should return `undefined` when there is no error, or an error string.
 
-```js
-const firstNameValidation = (value, values) => {
-    if (!value) {
-        return ['The firstName is required'];
-    }
-    return [];
-};
+Admin-on-rest will mash all the individual functions up to a single function looking just like the previous one:
+
+```jsx
+const required = value => value ? undefined : 'Required';
+const maxLength = max => value =>
+  value && value.length > max ? `Must be ${max} characters or less` : undefined;
+const number = value => value && isNaN(Number(value)) ? 'Must be a number' : undefined;
+const minValue = min => value =>
+  value && value < min ? `Must be at least ${min}` : undefined;
 
 const ageValidation = (value, values) => {
     if (!value) {
-        return ['The age is required'];
+        return 'The age is required';
     }
     if (age < 18) {
-        return ['Must be over 18'];
+        return 'Must be over 18';
     }
     return [];
 }
@@ -312,8 +318,8 @@ const ageValidation = (value, values) => {
 export const UserCreate = (props) => (
     <Create {...props}>
         <SimpleForm>
-            <TextInput label="First Name" source="firstName" validation={firstNameValidation} />
-            <TextInput label="Age" source="age" validation={ageValidation}/>
+            <TextInput label="First Name" source="firstName" validate={[ required, maxLength(15) ]} />
+            <TextInput label="Age" source="age" validate={[ required, number, minValue(18) ]}/>
         </SimpleForm>
     </Create>
 );
@@ -321,37 +327,46 @@ export const UserCreate = (props) => (
 
 Input validation functions receive the current field value, and the values of all fields of the current record. This allows for complex validation scenarios (e.g. validate that two passwords are the same).
 
+**Tip**: Validator functions receive the form `props` as third parameter, including the `translate` function. This lets you build internationalized validators:
+
+```jsx
+const required = (value, _, props) => value ? undefined : props.translate('myroot.validation.required');
+```
+
+**Tip**: The props of your Input components are passed to a redux-form `<Field>` component. So in addition to `validate`, you can also use `warn`.
+
 **Tip**: You can use *both* Form validation and input validation.
 
-### Per Field Validation: Constraints Object
+### Built-in Field Validators
 
-Validation constraints often look the same: asserting presence, size, format, etc. Instead of passing a function as validation, you can pass a constraints object:
+Admin-on-rest already bundles a few validator functions, that you can just require and use as field validators:
 
-{% raw %}
-```js
+* `required` if the field is mandatory,
+* `minValue` to specify a minimum value for integers,
+* `maxValue` to specify a maximum value for integers,
+* `minLength` to specify a minimum length for strings,
+* `maxLength` to specify a maximum length for strings,
+* `email` to check that the input is a valid email address,
+* `regex` to validate that the input matches a regex,
+* `choices` to validate that the input is within a given list,
+
+Example usage:
+
+```jsx
+import { required, minLength, maxLength, minValue, maxValue, number, regex, email, choices } from 'admin-on-rest';
+
 export const UserCreate = (props) => (
     <Create {...props}>
         <SimpleForm>
-            <TextInput label="First Name" source="firstName" validation={{ required: true }} />
-            <TextInput label="Age" source="age" validation={{ required: true, min: 18 }}/>
+            <TextInput label="First Name" source="firstName" validate={[ required, minLength(2), maxLength(15) ]} />
+            <TextInput label="Email" source="email" validate={email} />
+            <TextInput label="Age" source="age" validate={[ number, minValue(18) ]}/>
+            <TextInput label="Zip Code" source="zip" validate={regex(/^\d{5}$/, 'Must be a valid Zip Code')}/>
+            <SelectInput label="Sex" source="sex" choices={[
+                { id: 'm', name: 'Male' },
+                { id: 'f', name: 'Female' },
+            ]} validation={choices(['m', 'f'], 'Must be Male or Female')}/>
         </SimpleForm>
     </Create>
 );
 ```
-{% endraw %}
-
-As Admin-on-rest translates these constraints objects to functions, the result is the same as before.
-
-### Constraints Reference
-
-You can use the following validation constraint names:
-
-* `required` if the field is mandatory,
-* `min` to specify a minimum value for integers,
-* `max` to specify a maximum value for integers,
-* `minLength` to specify a minimum length for strings,
-* `maxLength` to specify a maximum length for strings,
-* `email` to check that the input is a valid email address,
-* `regex` to validate that the input matches a regex (must be an object with `pattern` and `message` keys),
-* `choices` to validate that the input is within a given list,
-* `custom` to use the function of your choice

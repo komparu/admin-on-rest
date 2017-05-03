@@ -21,7 +21,7 @@ What this form does upon submission depends on the `authClient` prop of the `<Ad
 
 For instance, to query an authentication route via HTTPS and store the credentials (a token) in local storage, configure `authClient` as follows:
 
-```js
+```jsx
 // in src/authClient.js
 import { AUTH_LOGIN } from 'admin-on-rest';
 
@@ -52,7 +52,7 @@ export default (type, params) => {
 
 Then, pass this client to the `<Admin>` component:
 
-```js
+```jsx
 // in src/App.js
 import authClient from './authClient';
 
@@ -71,9 +71,9 @@ To use the credentials when calling REST API routes, you have to tweak, this tim
 
 For instance, to pass the token obtained during login as an `Authorization` header, configure the REST client as follows:
 
-```js
+```jsx
 import { simpleRestClient, fetchUtils, Admin, Resource } from 'admin-on-rest';
-const httpClient = (url, options) => {
+const httpClient = (url, options = {}) => {
     if (!options.headers) {
         options.headers = new Headers({ Accept: 'application/json' });
     }
@@ -98,7 +98,7 @@ If you provide an `authClient` prop to `<Admin>`, admin-on-rest displays a logou
 
 For instance, to remove the token from local storage upon logout:
 
-```js
+```jsx
 // in src/authClient.js
 import { AUTH_LOGIN, AUTH_LOGOUT } from 'admin-on-rest';
 
@@ -118,17 +118,17 @@ export default (type, params) => {
 
 The `authClient` is also a good place to notify the authentication API that the user credentials are no longer valid after logout.
 
-## Checking Credentials During Navigation
+## Catching Authentication Errors On The API
 
-Admin-on-rest redirects to the login page whenever a REST response uses a 403 status code. But that's usually not enough, because admin-on-rest keeps data on the client side, and could display stale data while contacting the server - even after the credentials are no longer valid.
+Even though a user may be authenticated on the client-side, their credentials may no longer be valid server-side (e.g. if the token is only valid for a couple weeks). In that case, the API usually answers to all REST requests with an error code 401 or 403 - but what about *your* API?
 
-Fortunately, each time the user navigates, admin-on-rest calls the `authClient` with the `AUTH_CHECK` type, so it's the ideal place to check for credentials.
+Fortunately, each time the API returns an error, the `authClient` is called with the `AUTH_ERROR` type. Once again, it's up to you to decide which HTTP status codes should let the user continue (by returning a resolved promise) or log them out (by returning a rejected promise).
 
-For instance, to check for the existence of the token in local storage:
+For instance, to redirect the user to the login page for both 401 and 403 codes:
 
-```js
+```jsx
 // in src/authClient.js
-import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest';
+import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_ERROR } from 'admin-on-rest';
 
 export default (type, params) => {
     if (type === AUTH_LOGIN) {
@@ -137,8 +137,42 @@ export default (type, params) => {
     if (type === AUTH_LOGOUT) {
         // ...
     }
+    if (type === AUTH_ERROR) {
+        const { status } = params;
+        if (status === 401 || status === 403) {
+            localStorage.removeItem('token');
+            return Promise.reject();
+        }
+        return Promise.resolve();
+    }
+    return Promise.resolve();
+};
+```
+
+## Checking Credentials During Navigation
+
+Redirecting to the login page whenever a REST response uses a 401 status code is usually not enough, because admin-on-rest keeps data on the client side, and could display stale data while contacting the server - even after the credentials are no longer valid.
+
+Fortunately, each time the user navigates, admin-on-rest calls the `authClient` with the `AUTH_CHECK` type, so it's the ideal place to check for credentials.
+
+For instance, to check for the existence of the token in local storage:
+
+```jsx
+// in src/authClient.js
+import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_ERROR, AUTH_CHECK } from 'admin-on-rest';
+
+export default (type, params) => {
+    if (type === AUTH_LOGIN) {
+        // ...
+    }
+    if (type === AUTH_LOGOUT) {
+        // ...
+    }
+    if (type === AUTH_ERROR) {
+        // ...
+    }
     if (type === AUTH_CHECK) {
-        return localStorage.getItem('username') ? Promise.resolve() : Promise.reject();
+        return localStorage.getItem('token') ? Promise.resolve() : Promise.reject();
     }
     return Promise.reject('Unkown method');
 };
@@ -146,9 +180,9 @@ export default (type, params) => {
 
 If the promise is rejected, admin-on-rest redirects by default to the `/login` page. You can override where to redirect the user by passing an argument with a `redirectTo` property to the rejected promise:
 
-```js
+```jsx
 // in src/authClient.js
-import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest';
+import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_ERROR, AUTH_CHECK } from 'admin-on-rest';
 
 export default (type, params) => {
     if (type === AUTH_LOGIN) {
@@ -157,8 +191,11 @@ export default (type, params) => {
     if (type === AUTH_LOGOUT) {
         // ...
     }
+    if (type === AUTH_ERROR) {
+        // ...
+    }
     if (type === AUTH_CHECK) {
-        return localStorage.getItem('username') ? Promise.resolve() : Promise.reject({ redirectTo: '/no-access' });
+        return localStorage.getItem('token') ? Promise.resolve() : Promise.reject({ redirectTo: '/no-access' });
     }
     return Promise.reject('Unkown method');
 };
@@ -166,15 +203,18 @@ export default (type, params) => {
 
 **Tip**: For the `AUTH_CHECK` call, the `params` argument contains the `resource` name, so you can implement different checks for different resources:
 
-```js
+```jsx
 // in src/authClient.js
-import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest';
+import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_ERROR, AUTH_CHECK } from 'admin-on-rest';
 
 export default (type, params) => {
     if (type === AUTH_LOGIN) {
         // ...
     }
     if (type === AUTH_LOGOUT) {
+        // ...
+    }
+    if (type === AUTH_ERROR) {
         // ...
     }
     if (type === AUTH_CHECK) {
@@ -190,7 +230,7 @@ export default (type, params) => {
 };
 ```
 
-**Tip**: The `authClient` can only be called with `AUTH_LOGIN`, `AUTH_LOGOUT`, or `AUTH_CHECK`; that's why the final return is a rejected promise.
+**Tip**: The `authClient` can only be called with `AUTH_LOGIN`, `AUTH_LOGOUT`, `AUTH_ERROR`, or `AUTH_CHECK`; that's why the final return is a rejected promise.
 
 ## Customizing The Login and Logout Components
 
@@ -200,7 +240,7 @@ But what if you want to use an email instead of a username? What if you want to 
 
 For all these cases, it's up to you to implement your own `LoginPage` component, which will be displayed under the `/login` route instead of the default username/password form, and your own `LogoutButton` component, which will be displayed in the sidebar. Pass both these components to the `<Admin>` component:
 
-```js
+```jsx
 // in src/App.js
 import MyLoginPage from './MyLoginPage';
 import MyLogoutButton from './MyLogoutButton';
@@ -213,6 +253,28 @@ const App = () => (
 ```
 
 
-**Tip**: The `authClient` function is automatically passed as prop to your custom `LoginPage` and `LogoutButton` components.
+**Tip**: Use the `userLogin` and `userLogout` actions in your custom `Login` and `Logout` components.
 
-**Tip**: If you want to use Redux and Saga to handle credentials and authorization, you will need to register  [custom reducers](./AdminResource.html#customreducers) and [custom sagas](./AdminResource.html#customsagas) in the `<Admin>` component.
+## Restricting Access To A Custom Page
+
+If you add [custom pages](./Actions.html), of if you [create an admin app from scratch](./CustomApp.html), you may need to secure access to pages manually. That's the purpose of the `<Restricted>` component, that you can use as a decorator for your own components.
+
+{% raw %}
+```jsx
+// in src/MyPage.js
+import { withRouter } from 'react-router-dom';
+import { Restricted } from 'admin-on-rest';
+
+const MyPage = ({ location }) =>
+    <Restricted authParams={{ foo: 'bar' }} location={location} />
+        <div>
+            ...
+        </div>
+    </Restricted>
+}
+
+export default withRouter(MyPage);
+```
+{% endraw %}
+
+The `<Restricted>` component calls the `authClient` function with `AUTH_CHECK` and `authParams`. If the response is a fulfilled promise, the child component is rendered. If the response is a rejected promise, `<Restricted>` redirects to the login form. Upon successful login, the user is redirected to the initial location (that's why it's necessary to get the location from the router). 

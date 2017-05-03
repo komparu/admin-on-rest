@@ -17,7 +17,7 @@ Most admin-on-rest components support two style props to set inline styles:
 These props accept a style object:
 
 {% raw %}
-```js
+```jsx
 import { EmailField } from 'admin-on-rest/mui';
 
 <EmailField source="email" style={{ backgroundColor: 'lightgrey' }} elStyle={{ textDecoration: 'none' }} />
@@ -33,7 +33,7 @@ import { EmailField } from 'admin-on-rest/mui';
 Some components support additional props to style their own elements. For instance, when using a `<Datagrid>`, you can specify how a `<Field>` renders headers with the `headerStyle` prop. Here is how to make a column right aligned:
 
 {% raw %}
-```js
+```jsx
 export const ProductList = (props) => (
     <List {...props}>
         <Datagrid>
@@ -61,7 +61,7 @@ Sometimes you want the format to depend on the value. Admin-on-rest doesn't prov
 For instance, if you want to highlight a `<TextField>` in red if the value is higher than 100, just wrap the field into a HOC:
 
 {% raw %}
-```js
+```jsx
 const colored = WrappedComponent => props => props.record[props.source] > 100 ?
     <span style={{ color: 'red' }}><WrappedComponent {...props} /></span> :
     <WrappedComponent {...props} />;
@@ -89,10 +89,10 @@ To provide an optimized experience on mobile, tablet, and desktop devices, you o
 
 It expects element props named `small`, `medium`, and `large`. It displays the element that matches the screen size (with breakpoints at 768 and 992 pixels):
 
-```js
+```jsx
 // in src/posts.js
 import React from 'react';
-import { List, Responsive, SimpleList, Datagrid, TextField, ReferenceField, EditButton } from 'admin-on-rest/lib/mui';
+import { List, Responsive, SimpleList, Datagrid, TextField, ReferenceField, EditButton } from 'admin-on-rest';
 
 export const PostList = (props) => (
     <List {...props}>
@@ -128,7 +128,7 @@ export const PostList = (props) => (
 
 Material UI also supports [complete theming](http://www.material-ui.com/#/customization/themes) out of the box. Material UI ships two base themes: light and dark. Admin-on-rest uses the light one by default. To use the dark one, pass it to the `<Admin>` component, in the `theme` prop (along with `getMuiTheme()`).
 
-```js
+```jsx
 import darkBaseTheme from 'material-ui/styles/baseThemes/darkBaseTheme';
 import getMuiTheme from 'material-ui/styles/getMuiTheme';
 
@@ -145,7 +145,7 @@ const App = () => (
 
 If you need more fine tuning, you'll need to write your own `theme` object, following [Material UI themes documentation](http://www.material-ui.com/#/customization/themes). Material UI merges custom theme objects with the `light` theme.
 
-```js
+```jsx
 import {
   cyan500, cyan700,
   pinkA200,
@@ -193,7 +193,7 @@ The `muiTheme` object contains the following keys:
 
 Once your theme is defined, pass it to the `<Admin>` component, in the `theme` prop (along with `getMuiTheme()`).
 
-```js
+```jsx
 const App = () => (
     <Admin theme={getMuiTheme(myTheme)} restClient={simpleRestClient('http://path.to.my.api')}>
         // ...
@@ -205,7 +205,7 @@ const App = () => (
 
 Instead of the default layout, you can use your own component as the admin layout. Just use the `appLayout` prop of the `<Admin>` component:
 
-```js
+```jsx
 // in src/App.js
 import MyLayout from './MyLayout';
 
@@ -216,21 +216,32 @@ const App = () => (
 );
 ```
 
-Use the [default layout](https://github.com/marmelab/admin-on-rest/blob/master/src/mui/layout/Layout.js) as a starting point for your custom layout. Here is a simplified version (with a fixed sidebar, and no responsive support):
+Use the [default layout](https://github.com/marmelab/admin-on-rest/blob/master/src/mui/layout/Layout.js) as a starting point for your custom layout. Here is a simplified version (with no responsive support):
 
-```js
+```jsx
 // in src/MyLayout.js
-import React, { Component, PropTypes } from 'react';
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import CircularProgress from 'material-ui/CircularProgress';
 import injectTapEventPlugin from 'react-tap-event-plugin';
-import { AppBar, Sidebar, Notification } from 'admin-on-rest/lib/mui';
-import { setSidebarVisibility as setSidebarVisibilityAction } from 'admin-on-rest';
+import {
+    AdminRoutes,
+    AppBar,
+    Sidebar,
+    Notification,
+    setSidebarVisibility as setSidebarVisibilityAction
+} from 'admin-on-rest';
 
 injectTapEventPlugin();
 
 const styles = {
+    wrapper: {
+        // Avoid IE bug with Flexbox, see #467
+        display: 'flex',
+        flexDirection: 'column',
+    },
     main: {
         display: 'flex',
         flexDirection: 'column',
@@ -240,7 +251,8 @@ const styles = {
         backgroundColor: '#edecec',
         display: 'flex',
         flex: 1,
-        overflow: 'hidden',
+        overflowY: 'hidden',
+        overflowX: 'scroll',
     },
     content: {
         flex: 1,
@@ -261,26 +273,42 @@ class MyLayout extends Component {
     }
 
     render() {
-        const { children, isLoading, menu, title } = this.props;
+        const {
+            authClient,
+            customRoutes,
+            dashboard,
+            isLoading,
+            menu,
+            resources,
+            title,
+            width,
+        } = this.props;
         return (
             <MuiThemeProvider>
-                <div style={styles.main}>
-                    <AppBar title={title} />
-                    <div className="body" style={styles.body}>
-                        <div style={styles.content}>
-                            {children}
+                <div style={styles.wrapper}>
+                    <div style={styles.main}>
+                        <AppBar title={title} />
+                        <div className="body" style={styles.body}>
+                            <div style={styles.content}>
+                                <AdminRoutes
+                                    customRoutes={customRoutes}
+                                    resources={resources}
+                                    authClient={authClient}
+                                    dashboard={dashboard}
+                                />
+                            </div>
+                            <Sidebar>
+                                {menu}
+                            </Sidebar>
                         </div>
-                        <Sidebar theme={theme}>
-                            {menu}
-                        </Sidebar>
+                        <Notification />
+                        {isLoading && <CircularProgress
+                            color="#fff"
+                            size={width === 1 ? 20 : 30}
+                            thickness={2}
+                            style={styles.loader}
+                        />}
                     </div>
-                    <Notification />
-                    {isLoading && <CircularProgress
-                        color="#fff"
-                        size={width === 1 ? 20 : 30}
-                        thickness={2}
-                        style={styles.loader}
-                    />}
                 </div>
             </MuiThemeProvider>
         );
@@ -288,11 +316,15 @@ class MyLayout extends Component {
 }
 
 MyLayout.propTypes = {
+    authClient: PropTypes.func,
+    customRoutes: PropTypes.array,
+    dashboard: PropTypes.oneOfType([PropTypes.func, PropTypes.string]),
     isLoading: PropTypes.bool.isRequired,
-    children: PropTypes.node,
     menu: PropTypes.element,
+    resources: PropTypes.array,
     setSidebarVisibility: PropTypes.func.isRequired,
     title: PropTypes.string.isRequired,
+    width: PropTypes.number,
 };
 
 function mapStateToProps(state) {

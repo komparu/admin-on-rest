@@ -1,4 +1,5 @@
-import React, { Component, PropTypes } from 'react';
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Card, CardTitle, CardText } from 'material-ui/Card';
 import compose from 'recompose/compose';
@@ -22,6 +23,7 @@ export class Edit extends Component {
             key: 0,
             record: props.data,
         };
+        this.previousKey = 0;
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
@@ -88,9 +90,14 @@ export class Edit extends Component {
             data,
         });
         const titleElement = data ? <Title title={title} record={data} defaultTitle={defaultTitle} /> : '';
+        // using this.previousKey instead of this.fullRefresh makes
+        // the new form mount, the old form unmount, and the new form update appear in the same frame
+        // so the form doesn't disappear while refreshing
+        const isRefreshing = key !== this.previousKey;
+        this.previousKey = key;
 
         return (
-            <div>
+            <div className="edit-page">
                 <Card style={{ opacity: isLoading ? 0.8 : 1 }} key={key}>
                     {actions && React.cloneElement(actions, {
                         basePath,
@@ -101,11 +108,12 @@ export class Edit extends Component {
                         resource,
                     })}
                     <ViewTitle title={titleElement} />
-                    {data && React.cloneElement(children, {
+                    {data && !isRefreshing && React.cloneElement(children, {
                         onSubmit: this.handleSubmit,
                         resource,
                         basePath,
                         record: data,
+                        translate,
                     })}
                     {!data && <CardText>&nbsp;</CardText>}
                 </Card>
@@ -125,7 +133,7 @@ Edit.propTypes = {
     id: PropTypes.string.isRequired,
     isLoading: PropTypes.bool.isRequired,
     location: PropTypes.object.isRequired,
-    params: PropTypes.object.isRequired,
+    match: PropTypes.object.isRequired,
     resource: PropTypes.string.isRequired,
     title: PropTypes.any,
     translate: PropTypes.func,
@@ -133,8 +141,8 @@ Edit.propTypes = {
 
 function mapStateToProps(state, props) {
     return {
-        id: props.params.id,
-        data: state.admin[props.resource].data[props.params.id],
+        id: decodeURIComponent(props.match.params.id),
+        data: state.admin[props.resource].data[decodeURIComponent(props.match.params.id)],
         isLoading: state.admin.loading > 0,
     };
 }

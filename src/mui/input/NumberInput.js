@@ -1,4 +1,5 @@
-import React, { Component, PropTypes } from 'react';
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import TextField from 'material-ui/TextField';
 import FieldTitle from '../../util/FieldTitle';
 
@@ -69,7 +70,10 @@ NumberInput.propTypes = {
     resource: PropTypes.string,
     source: PropTypes.string,
     step: PropTypes.string.isRequired,
-    validation: PropTypes.object,
+    validate: PropTypes.oneOfType([
+        PropTypes.func,
+        PropTypes.arrayOf(PropTypes.func)
+    ]),
 };
 
 NumberInput.defaultProps = {
