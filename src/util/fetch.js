@@ -34,7 +34,7 @@ export const fetchJson = (url, options = {}) => {
                 return Promise.reject(new HttpError(statusText, status));
             }
             return { status, headers, body, json };
-        });
+        }).catch(err => Promise.reject(new HttpError(err.message, err.status)));
 };
 
 export const queryParameters = data => Object.keys(data)
