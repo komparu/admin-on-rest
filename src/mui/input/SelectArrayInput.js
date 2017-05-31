@@ -36,16 +36,40 @@ const dataSourceConfig = { text: 'text', value: 'value' };
  * ];
  * <SelectArrayInput source="categories" choices={choices} optionText="plural_name" optionValue="_id" />
  *
+ * `optionText` also accepts a function, so you can shape the option text at will:
+ * @example
+ * const choices = [
+ *    { id: '1', name: 'Book', quantity: 23 },
+ *    { id: '2', name: 'Video', quantity: 56 },
+ *    { id: '3', name: 'Audio', quantity: 12 },
+ * ];
+ * const optionRenderer = choice => `${choice.name} (${choice.quantity})`;
+ * <SelectArrayInput source="categories" choices={choices} optionText={optionRenderer} />
+ *
  * The object passed as `options` props is passed to the material-ui-chip-input component
  * @see https://github.com/TeamWertarbyte/material-ui-chip-input
  */
 export class SelectArrayInput extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            values: this.resolveValues(props.input.value || []),
-        };
+    state = {
+        values: [],
+    };
+
+    componentWillMount = () => {
+        this.setState({
+            values: this.getChoicesForValues(this.props.input.value || [], this.props.choices),
+        });
     }
+
+    componentWillReceiveProps = (nextProps) => {
+        if (
+            this.props.choices !== nextProps.choices ||
+            this.props.input.value !== nextProps.input.value
+        ) {
+            this.setState({
+                values: this.getChoicesForValues(nextProps.input.value || [], nextProps.choices),
+            });
+        }
+    };
 
     handleBlur = () => {
         const extracted = this.extractIds(this.state.values);
@@ -85,37 +109,32 @@ export class SelectArrayInput extends Component {
         return [value];
     };
 
-    resolveValues = (values) => {
+    getChoicesForValues = (values, choices = []) => {
+        const { optionValue, optionText } = this.props;
         if (!values || !Array.isArray(values)) {
             throw Error('Value of SelectArrayInput should be an array');
         }
-
-        if (this.props.choices && this.props.choices.length > 0) {
-            return this.getChoices().filter(choice => values.includes(choice.value));
-        }
-        return values.map(value => ({
-            value, text: value, // FIXME will show ids instead of labels on first paint, with no redraw
-        }));
+        return values
+            .map(value => choices.find(c => c[optionValue] === value) || { [optionValue]: value, [optionText]: value })
+            .map(this.formatChoice);
     };
 
-    getChoices = () => {
-        const {
-            choices,
-            optionText,
-            optionValue,
-            translate,
-            translateChoice,
-        } = this.props;
-        return choices.map(choice => ({
+    formatChoices = choices => choices.map(this.formatChoice);
+
+    formatChoice = (choice) => {
+        const { optionText, optionValue, translateChoice, translate } = this.props;
+        const choiceText = typeof optionText === 'function' ? optionText(choice) : choice[optionText];
+        return {
             value: choice[optionValue],
-            text: translateChoice ? translate(choice[optionText], { _: choice[optionText] }) : choice[optionText],
-        }));
+            text: translateChoice ? translate(choiceText, { _: choiceText }) : choiceText,
+        };
     }
 
     render() {
         const {
             elStyle,
             input,
+            isRequired,
             choices,
             label,
             meta: { touched, error },
@@ -139,10 +158,10 @@ export class SelectArrayInput extends Component {
                 onRequestAdd={this.handleAdd}
                 onRequestDelete={this.handleDelete}
                 onUpdateInput={setFilter}
-                floatingLabelText={<FieldTitle label={label} source={source} resource={resource}/>}
+                floatingLabelText={<FieldTitle label={label} source={source} resource={resource} isRequired={isRequired} />}
                 errorText={touched && error}
                 style={elStyle}
-                dataSource={this.getChoices()}
+                dataSource={this.formatChoices(choices)}
                 dataSourceConfig={dataSourceConfig}
                 openOnFocus
                 {...options}
@@ -156,6 +175,7 @@ SelectArrayInput.propTypes = {
     elStyle: PropTypes.object,
     choices: PropTypes.arrayOf(PropTypes.object),
     input: PropTypes.object,
+    isRequired: PropTypes.bool,
     label: PropTypes.string,
     meta: PropTypes.object,
     name: PropTypes.string,

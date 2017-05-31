@@ -576,7 +576,7 @@ For instance, if the post object has many tags, a post resource may look like:
 ```js
 {
     id: 1234,
-    tag_ids: [ "1", "23", "4" ]
+    tag_ids: [1, 23, 4]
 }
 ```
 
@@ -823,6 +823,18 @@ const choices = [
    { _id: '3', name: 'Audio', plural_name: 'Audios' },
 ];
 <SelectArrayInput source="categories" choices={choices} optionText="plural_name" optionValue="_id" />
+```
+
+`optionText` also accepts a function, so you can shape the option text at will:
+
+```js
+const choices = [
+   { id: '1', name: 'Book', quantity: 23 },
+   { id: '2', name: 'Video', quantity: 56 },
+   { id: '3', name: 'Audio', quantity: 12 },
+];
+const optionRenderer = choice => `${choice.name} (${choice.quantity})`;
+<SelectArrayInput source="categories" choices={choices} optionText={optionRenderer} />
 ```
 
 The choices are translated by default, so you can use translation identifiers as choices:
