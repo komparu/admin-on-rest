@@ -15,6 +15,7 @@ import DefaultActions from './Actions';
 import { crudGetList as crudGetListAction } from '../../actions/dataActions';
 import { changeListParams as changeListParamsAction } from '../../actions/listActions';
 import translate from '../../i18n/translate';
+import removeKey from '../../util/removeKey';
 
 const styles = {
     noResults: { padding: 20 },
@@ -129,8 +130,9 @@ export class List extends Component {
     updateData(query) {
         const params = query || this.getQuery();
         const { sort, order, page, perPage, filter } = params;
+        const pagination = { page: parseInt(page, 10), perPage: parseInt(perPage, 10) };
         const permanentFilter = this.props.filter;
-        this.props.crudGetList(this.props.resource, { page, perPage }, { field: sort, order }, { ...filter, ...permanentFilter });
+        this.props.crudGetList(this.props.resource, pagination, { field: sort, order }, { ...filter, ...permanentFilter });
     }
 
     setSort = sort => this.changeParams({ type: SET_SORT, payload: sort });
@@ -148,14 +150,7 @@ export class List extends Component {
 
     hideFilter = (filterName) => {
         this.setState({ [filterName]: false });
-        const newFilters = Object.keys(this.props.filterValues).reduce((filters, key) => (
-            key === filterName ?
-            filters :
-            ({
-                ...filters,
-                [key]: this.props.filterValues[key],
-            })
-        ), {});
+        const newFilters = removeKey(this.props.filterValues, filterName);
         this.setFilters(newFilters);
     }
 
